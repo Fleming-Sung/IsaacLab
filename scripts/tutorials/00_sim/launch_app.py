@@ -21,6 +21,9 @@ import argparse
 from isaaclab.app import AppLauncher
 
 # create argparser
+# 与之前的例子相比，增加了三个脚本参数，可以在执行时指定;其中，size在后续内容中被使用，作为生成立方体的大小
+# 另外两个参数是AppLauncher中本身就有的
+# 本例说明，无论AppLauncher是否内置某个参数，都可以在用脚本参数的方式传入
 parser = argparse.ArgumentParser(description="Tutorial on running IsaacSim via the AppLauncher.")
 parser.add_argument("--size", type=float, default=1.0, help="Side-length of cuboid")
 # SimulationApp arguments https://docs.omniverse.nvidia.com/py/isaacsim/source/isaacsim.simulation_app/docs/index.html?highlight=simulationapp#isaacsim.simulation_app.SimulationApp
@@ -59,7 +62,7 @@ def design_scene():
 
     # spawn a cuboid
     cfg_cuboid = sim_utils.CuboidCfg(
-        size=[args_cli.size] * 3,
+        size=[args_cli.size] * 3, # 自定义脚本参数的使用方法 # type: ignore
         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 1.0, 1.0)),
     )
     # Spawn cuboid, altering translation on the z-axis to scale to its size
@@ -73,7 +76,7 @@ def main():
     sim_cfg = sim_utils.SimulationCfg(dt=0.01, device=args_cli.device)
     sim = sim_utils.SimulationContext(sim_cfg)
     # Set main camera
-    sim.set_camera_view([2.0, 0.0, 2.5], [-0.5, 0.0, 0.5])
+    sim.set_camera_view([2.0, 0.0, 2.5], [-0.5, 0.0, 0.5]) # type: ignore
 
     # Design scene by adding assets to it
     design_scene()
@@ -94,3 +97,7 @@ if __name__ == "__main__":
     main()
     # close sim app
     simulation_app.close()
+
+# 最后，这个例子还以livestream模式的环境变量设置，讲解了环境变量与脚本参数的优先级：环境变量低于脚本参数
+# LIVESTREAM=2 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py # 以livestream模式运行
+# LIVESTREAM=0 ./isaaclab.sh -p scripts/tutorials/00_sim/launch_app.py --size 0.5 --livestream 2 # 还是以livestream模式运行

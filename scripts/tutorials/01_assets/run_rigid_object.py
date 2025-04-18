@@ -14,8 +14,11 @@ This script demonstrates how to create a rigid object and interact with it.
 """
 
 """Launch Isaac Sim Simulator first."""
+'''
+总体架构上，设计场景和运行模拟被分为了两个函数，在main函数汇总一次被调用：先加载场景所需的各个元素，再运行模拟。
+'''
 
-
+# 启动控制器、处理参数
 import argparse
 
 from isaaclab.app import AppLauncher
@@ -43,6 +46,7 @@ from isaaclab.assets import RigidObject, RigidObjectCfg
 from isaaclab.sim import SimulationContext
 
 
+# 设计场景
 def design_scene():
     """Designs the scene."""
     # Ground-plane
@@ -54,11 +58,13 @@ def design_scene():
 
     # Create separate groups called "Origin1", "Origin2", "Origin3"
     # Each group will have a robot in it
+    # 生成了4个Xform
     origins = [[0.25, 0.25, 0.0], [-0.25, 0.25, 0.0], [0.25, -0.25, 0.0], [-0.25, -0.25, 0.0]]
     for i, origin in enumerate(origins):
         prim_utils.create_prim(f"/World/Origin{i}", "Xform", translation=origin)
 
     # Rigid Object
+    # 在内阁origin下分别生成了cone刚体
     cone_cfg = RigidObjectCfg(
         prim_path="/World/Origin.*/Cone",
         spawn=sim_utils.ConeCfg(
@@ -74,6 +80,7 @@ def design_scene():
     cone_object = RigidObject(cfg=cone_cfg)
 
     # return the scene information
+    # 由于需要与刚体进行交互，所以返回了scene_entities
     scene_entities = {"cone": cone_object}
     return scene_entities, origins
 
@@ -96,13 +103,24 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, RigidObj
             sim_time = 0.0
             count = 0
             # reset root state
+            # 获取根状态
             root_state = cone_object.data.default_root_state.clone()
+            # print(root_state) 
+            # 直接打印根状态的话，结果如下，看不出什么实际意义。
+            '''
+            tensor([[0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                    [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.]], device='cuda:0')
+            '''
             # sample a random position on a cylinder around the origins
+            # 修改根状态
             root_state[:, :3] += origins
             root_state[:, :3] += math_utils.sample_cylinder(
                 radius=0.1, h_range=(0.25, 0.5), size=cone_object.num_instances, device=cone_object.device
             )
             # write root state to simulation
+            # 将根状态的位置和速度写入
             cone_object.write_root_pose_to_sim(root_state[:, :7])
             cone_object.write_root_velocity_to_sim(root_state[:, 7:])
             # reset buffers
@@ -129,7 +147,7 @@ def main():
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim = SimulationContext(sim_cfg)
     # Set main camera
-    sim.set_camera_view(eye=[1.5, 0.0, 1.0], target=[0.0, 0.0, 0.0])
+    sim.set_camera_view(eye=[1.5, 0.0, 1.0], target=[0.0, 0.0, 0.0]) # type: ignore
     # Design scene
     scene_entities, scene_origins = design_scene()
     scene_origins = torch.tensor(scene_origins, device=sim.device)
@@ -138,7 +156,7 @@ def main():
     # Now we are ready!
     print("[INFO]: Setup complete...")
     # Run the simulator
-    run_simulator(sim, scene_entities, scene_origins)
+    run_simulator(sim, scene_entities, scene_origins) # type: ignore
 
 
 if __name__ == "__main__":

@@ -43,6 +43,7 @@ from isaaclab.sim import SimulationContext
 ##
 # Pre-defined configs
 ##
+# 直接调用了assets类与定义的cfg
 from isaaclab_assets import CARTPOLE_CFG  # isort:skip
 
 
@@ -64,9 +65,9 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     prim_utils.create_prim("/World/Origin2", "Xform", translation=origins[1])
 
     # Articulation
-    cartpole_cfg = CARTPOLE_CFG.copy()
+    cartpole_cfg = CARTPOLE_CFG.copy() # type: ignore
     cartpole_cfg.prim_path = "/World/Origin.*/Robot"
-    cartpole = Articulation(cfg=cartpole_cfg)
+    cartpole = Articulation(cfg=cartpole_cfg) # 基于cartpole_cfg实例化了一个Articulation类以导入含关节的机器人
 
     # return the scene information
     scene_entities = {"cartpole": cartpole}
@@ -92,20 +93,20 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
             # root state
             # we offset the root state by the origin since the states are written in simulation world frame
             # if this is not done, then the robots will be spawned at the (0, 0, 0) of the simulation world
-            root_state = robot.data.default_root_state.clone()
-            root_state[:, :3] += origins
+            root_state = robot.data.default_root_state.clone() #获取根状态
+            root_state[:, :3] += origins                       # 将origins赋值给根状态的前3列（spawn坐标）
             robot.write_root_pose_to_sim(root_state[:, :7])
             robot.write_root_velocity_to_sim(root_state[:, 7:])
             # set joint positions with some noise
             joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
-            joint_pos += torch.rand_like(joint_pos) * 0.1
+            joint_pos += torch.rand_like(joint_pos) * 0.1 # 将关节位置修改到一个范围内的随机位置
             robot.write_joint_state_to_sim(joint_pos, joint_vel)
             # clear internal buffers
             robot.reset()
             print("[INFO]: Resetting robot state...")
         # Apply random action
         # -- generate random joint efforts
-        efforts = torch.randn_like(robot.data.joint_pos) * 5.0
+        efforts = torch.randn_like(robot.data.joint_pos) * 5.0 # 随机控制（力）
         # -- apply action to the robot
         robot.set_joint_effort_target(efforts)
         # -- write data to sim
@@ -115,7 +116,7 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict[str, Articula
         # Increment counter
         count += 1
         # Update buffers
-        robot.update(sim_dt)
+        robot.update(sim_dt) # 更新机器人状态
 
 
 def main():
@@ -124,7 +125,7 @@ def main():
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim = SimulationContext(sim_cfg)
     # Set main camera
-    sim.set_camera_view([2.5, 0.0, 4.0], [0.0, 0.0, 2.0])
+    sim.set_camera_view([2.5, 0.0, 4.0], [0.0, 0.0, 2.0]) # type: ignore
     # Design scene
     scene_entities, scene_origins = design_scene()
     scene_origins = torch.tensor(scene_origins, device=sim.device)
@@ -133,7 +134,7 @@ def main():
     # Now we are ready!
     print("[INFO]: Setup complete...")
     # Run the simulator
-    run_simulator(sim, scene_entities, scene_origins)
+    run_simulator(sim, scene_entities, scene_origins) # type: ignore
 
 
 if __name__ == "__main__":
